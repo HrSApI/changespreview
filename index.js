@@ -97,13 +97,8 @@ function createEmbed(commit, filesChanged) {
 
 app.post('/github-webhook', async (req, res) => {
     const event = req.headers['x-github-event'];
-    const payload = req.body;
 
-    if (event === 'push') {
-        const { commits, ref } = payload;
-        const message = `Push event detected on branch ${ref}.\nCommits: ${commits.length}`;
-        client.channels.cache.get(CHANNEL_ID).send({ content: message });
-    } else if (event === 'check_run') {
+    if (event === 'check_run') {
         try {
             const commits = await fetchCommits();
             const latestCommit = commits[0];
