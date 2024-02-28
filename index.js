@@ -98,7 +98,7 @@ function createEmbed(commit, filesChanged) {
 app.post('/github-webhook', async (req, res) => {
     const event = req.headers['x-github-event'];
 
-    if (event === 'check_run') {
+    if (event === 'workflow_run') {
         try {
             const commits = await fetchCommits();
             const latestCommit = commits[0];
