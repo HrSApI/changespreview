@@ -95,30 +95,30 @@ function createEmbed(commit, filesChanged) {
   return [commitEmbed, ...fileEmbeds];
 }
 
-app.post('/github-webhook', async (req, res) => {
-    const event = req.headers['x-github-event'];
+app.post("/github-webhook", async (req, res) => {
+  const event = req.headers["x-github-event"];
 
-    if (event === 'workflow_run') {
-        try {
-            const commits = await fetchCommits();
-            const latestCommit = commits[0];
-            const filesChanged = await fetchCommitFiles(latestCommit.sha);
-            const embeds = createEmbed(latestCommit, filesChanged);
-            client.channels.cache.get(CHANNEL_ID).send({ embeds: embeds });
-        } catch (error) {
-            console.error("Error fetching commits:", error);
-            client.channels.cache.get(CHANNEL_ID).send({ content: "Error fetching commits." });
-        }
+  if (event === "check_run") {
+    try {
+      const commits = await fetchCommits();
+      const latestCommit = commits[0];
+      const filesChanged = await fetchCommitFiles(latestCommit.sha);
+      const embeds = createEmbed(latestCommit, filesChanged);
+      client.channels.cache.get(CHANNEL_ID).send({ embeds: embeds });
+    } catch (error) {
+      console.error("Error fetching commits:", error);
+      client.channels.cache
+        .get(CHANNEL_ID)
+        .send({ content: "Error fetching commits." });
     }
+  }
 
-    res.sendStatus(200);
+  res.sendStatus(200);
 });
 
 app.get("/", (req, res) => {
-    res.send("Hello World");
-    }
-);
-  
+  res.send("Hello World");
+});
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
