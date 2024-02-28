@@ -72,20 +72,54 @@ client.on(Events.MessageCreate, async (message) => {
 });
 
 function createEmbed(commit, filesChanged) {
-    const commitEmbed = new EmbedBuilder()
+  const commitEmbed = new EmbedBuilder()
+    .setColor("#0099ff")
+    .setTitle("Latest Commit Updates")
+    .setDescription(
+      `**Here are the latest commits in the repository:\n\n Commit Message:** **${
+        commit.commit.message
+      }** \n\n SHA: **[${commit.sha}](${commit.html_url})** \n\n By: **${
+        commit.commit.author.name
+      }** committed on **${new Date(
+        commit.commit.author.date
+      ).toDateString()}**`
+    );
+
+  const fileEmbeds = filesChanged.map((file) => {
+    return new EmbedBuilder()
       .setColor("#0099ff")
-      .setTitle("Latest Commit Updates")
-      .setDescription(`Here are the latest commits in the repository:\n\n${commit.commit.message}\n\n[${commit.sha}](${commit.html_url})\n\n${commit.commit.author.name} committed on ${new Date(commit.commit.author.date).toDateString()}`);
+      .setTitle(`Changes in ${file.filename}`)
+      .setDescription("```diff\n" + file.patch + "\n```");
+  });
+
+  return [commitEmbed, ...fileEmbeds];
+}
+
+app.post('/github-webhook', async (req, res) => {
+    const event = req.headers['x-github-event'];
+    const payload = req.body;
+
+    if (event === 'push') {
+        const { commits, ref } = payload;
+        const message = `Push event detected on branch ${ref}.\nCommits: ${commits.length}`;
+        client.channels.cache.get(CHANNEL_ID).send({ content: message });
+    } else if (event === 'check_run') {
+        try {
+            const commits = await fetchCommits();
+            const latestCommit = commits[0];
+            const filesChanged = await fetchCommitFiles(latestCommit.sha);
+            const embeds = createEmbed(latestCommit, filesChanged);
+            client.channels.cache.get(CHANNEL_ID).send({ embeds: embeds });
+        } catch (error) {
+            console.error("Error fetching commits:", error);
+            client.channels.cache.get(CHANNEL_ID).send({ content: "Error fetching commits." });
+        }
+    }
+
+    res.sendStatus(200);
+});
+
   
-    const fileEmbeds = filesChanged.map((file) => {
-      return new EmbedBuilder()
-        .setColor("#0099ff")
-        .setTitle(`Changes in ${file.filename}`)
-        .setDescription("```diff\n" + file.patch + "\n```");
-    });
-  
-    return [commitEmbed, ...fileEmbeds];
-  }
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
