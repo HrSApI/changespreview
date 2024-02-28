@@ -1,1 +1,1 @@
-console.log("Whew");
+console.log("Whew, that was a lot of code! Let's break it down a bit.");
