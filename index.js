@@ -96,25 +96,29 @@ function createEmbed(commit, filesChanged) {
 }
 
 app.post("/github-webhook", async (req, res) => {
-  const event = req.headers["x-github-event"];
-
-  if (event === "check_run") {
-    try {
-      const commits = await fetchCommits();
-      const latestCommit = commits[0];
-      const filesChanged = await fetchCommitFiles(latestCommit.sha);
-      const embeds = createEmbed(latestCommit, filesChanged);
-      client.channels.cache.get(CHANNEL_ID).send({ embeds: embeds });
-    } catch (error) {
-      console.error("Error fetching commits:", error);
-      client.channels.cache
-        .get(CHANNEL_ID)
-        .send({ content: "Error fetching commits." });
+    const event = req.headers["x-github-event"];
+  
+    if (event === "workflow_run") {
+      const action = req.body.action;
+      if (action === "completed" && req.body.workflow_run.conclusion === "success") {
+        try {
+          const commits = await fetchCommits();
+          const latestCommit = commits[0];
+          const filesChanged = await fetchCommitFiles(latestCommit.sha);
+          const embeds = createEmbed(latestCommit, filesChanged);
+          client.channels.cache.get(CHANNEL_ID).send({ embeds: embeds });
+        } catch (error) {
+          console.error("Error fetching commits:", error);
+          client.channels.cache
+            .get(CHANNEL_ID)
+            .send({ content: "Error fetching commits." });
+        }
+      }
     }
-  }
-
-  res.sendStatus(200);
-});
+  
+    res.sendStatus(200);
+  });
+  
 
 app.get("/", (req, res) => {
   res.send("Hello World");
