@@ -9,6 +9,8 @@ jobs:
     name: Commit comments
     runs-on: ubuntu-latest
     steps:
+      - name: Debug Message
+        run: echo "Workflow is running"
       - name: Comment on commit
         uses: changespreview/comments-action@main
         env:
