@@ -119,6 +119,10 @@ app.post('/github-webhook', async (req, res) => {
     res.sendStatus(200);
 });
 
+app.get("/", (req, res) => {
+    res.send("Hello World");
+    }
+);
   
 
 app.listen(PORT, () => {
