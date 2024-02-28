@@ -12,6 +12,6 @@ jobs:
       - name: Debug Message
         run: echo "Workflow is running"
       - name: Comment on commit
-        uses: actions/checkout@v3
+        uses: changespreview/comments-action@main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
