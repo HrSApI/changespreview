@@ -21,29 +21,54 @@ client.on(Events.ClientReady, (c) => {
 });
 
 const PORT = process.env.PORT || 3000;
+const githubToken = process.env.GITHUB_TOKEN;
+const repoOwner = "HrSApI";
+const repoName = "changespreview";
 const CHANNEL_ID = "1110946409647190146";
 
 app.use(bodyParser.json());
 
-app.post("/github-webhook", (req, res) => {
-  const { ref, commits } = req.body;
-
-  if (ref && ref === "refs/heads/master") {
-    const changes = commits
-      .map((commit) => `${commit.author.name}: ${commit.message}`)
-      .join("\n");
-    const embed = new EmbedBuilder()
-      .setColor("#0099ff")
-      .setTitle("New Commits Pushed to Master")
-      .setDescription(changes);
-
-    const channel = client.channels.cache.get(CHANNEL_ID);
-    channel.send({
-      embeds: [embed],
-    });
+client.on(Events.MessageCreate, async (message) => {
+  if (message.content === "!commitupdates") {
+    try {
+      const commits = await fetchCommits();
+      const embed = createEmbed(commits);
+      message.channel.send({ embeds: [embed] });
+    } catch (error) {
+      console.error("Error fetching commits:", error);
+      message.channel.send("Error fetching commits.");
+    }
   }
-  res.sendStatus(200);
 });
+
+async function fetchCommits() {
+  const url = `https://api.github.com/repos/${repoOwner}/${repoName}/commits`;
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `token ${githubToken}`,
+    },
+  });
+  if (!response.ok) {
+    throw new Error("Failed to fetch commits");
+  }
+  const data = await response.json();
+  return data.slice(0, 5); // Limiting to the latest 5 commits
+}
+
+function createEmbed(commits) {
+  const embed = new EmbedBuilder()
+    .setColor("#0099ff")
+    .setTitle("Latest Commit Updates")
+    .setDescription("Here are the latest commits in the repository:");
+
+  commits.forEach((commit) => {
+    embed.setDescription(
+      `${commit.commit.author.name} - ${commit.commit.message}`
+    );
+  });
+
+  return embed;
+}
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
