@@ -42,7 +42,6 @@ app.post("/github-webhook", (req, res) => {
       embeds: [embed],
     });
   }
-
   res.sendStatus(200);
 });
 
