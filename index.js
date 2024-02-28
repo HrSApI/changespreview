@@ -28,19 +28,6 @@ const CHANNEL_ID = "1110946409647190146";
 
 app.use(bodyParser.json());
 
-client.on(Events.MessageCreate, async (message) => {
-  if (message.content === "!commitupdates") {
-    try {
-      const commits = await fetchCommits();
-      const embed = createEmbed(commits);
-      message.channel.send({ embeds: [embed] });
-    } catch (error) {
-      console.error("Error fetching commits:", error);
-      message.channel.send("Error fetching commits.");
-    }
-  }
-});
-
 async function fetchCommits() {
   const url = `https://api.github.com/repos/${repoOwner}/${repoName}/commits`;
   const response = await fetch(url, {
@@ -52,23 +39,53 @@ async function fetchCommits() {
     throw new Error("Failed to fetch commits");
   }
   const data = await response.json();
-  return data.slice(0, 5); // Limiting to the latest 5 commits
+  return data;
 }
 
-function createEmbed(commits) {
-  const embed = new EmbedBuilder()
-    .setColor("#0099ff")
-    .setTitle("Latest Commit Updates")
-    .setDescription("Here are the latest commits in the repository:");
-
-  commits.forEach((commit) => {
-    embed.setDescription(
-      `${commit.commit.author.name} - ${commit.commit.message}`
-    );
+async function fetchCommitFiles(commitSha) {
+  const url = `https://api.github.com/repos/${repoOwner}/${repoName}/commits/${commitSha}`;
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `token ${githubToken}`,
+    },
   });
-
-  return embed;
+  if (!response.ok) {
+    throw new Error("Failed to fetch commit details");
+  }
+  const data = await response.json();
+  return data.files;
 }
+
+client.on(Events.MessageCreate, async (message) => {
+  if (message.content === "!commitupdates") {
+    try {
+      const commits = await fetchCommits();
+      const latestCommit = commits[0];
+      const filesChanged = await fetchCommitFiles(latestCommit.sha);
+      const embeds = createEmbed(latestCommit, filesChanged);
+      message.channel.send({ embeds: embeds });
+    } catch (error) {
+      console.error("Error fetching commits:", error);
+      message.channel.send("Error fetching commits.");
+    }
+  }
+});
+
+function createEmbed(commit, filesChanged) {
+    const commitEmbed = new EmbedBuilder()
+      .setColor("#0099ff")
+      .setTitle("Latest Commit Updates")
+      .setDescription(`Here are the latest commits in the repository:\n\n${commit.commit.message}\n\n[${commit.sha}](${commit.html_url})\n\n${commit.commit.author.name} committed on ${new Date(commit.commit.author.date).toDateString()}`);
+  
+    const fileEmbeds = filesChanged.map((file) => {
+      return new EmbedBuilder()
+        .setColor("#0099ff")
+        .setTitle(`Changes in ${file.filename}`)
+        .setDescription("```diff\n" + file.patch + "\n```");
+    });
+  
+    return [commitEmbed, ...fileEmbeds];
+  }
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
